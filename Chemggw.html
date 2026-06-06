@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Chemisches Gleichgewicht A ⇌ B</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    margin:20px;
+}
+
+.container{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:20px;
+}
+
+.controls{
+    border:1px solid #ccc;
+    border-radius:10px;
+    padding:15px;
+}
+
+label{
+    display:block;
+    margin-top:10px;
+}
+
+input{
+    width:100%;
+    padding:4px;
+}
+
+button{
+    width:100%;
+    margin-top:15px;
+    padding:10px;
+    cursor:pointer;
+}
+
+.chart-container{
+    height:400px;
+    margin-bottom:40px;
+}
+
+table{
+    border-collapse:collapse;
+    width:100%;
+    margin-top:20px;
+}
+
+th,td{
+    border:1px solid #aaa;
+    padding:5px;
+    text-align:center;
+}
+
+th{
+    background:#eaeaea;
+}
+
+.info{
+    margin-top:10px;
+    padding:10px;
+    background:#f3f3f3;
+    border-radius:8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Simulation eines chemischen Gleichgewichts A ⇌ B</h1>
+
+<div class="container">
+
+<div class="controls">
+
+<h2>Einstellungen</h2>
+
+<label>
+Anfangsteilchen A
+<input type="number" id="startA" value="1000" min="0">
+</label>
+
+<label>
+Anfangsteilchen B
+<input type="number" id="startB" value="0" min="0">
+</label>
+
+<label>
+Anteil A → B pro Zeitschritt (%)
+<input type="number" id="k1" value="10" min="0" max="100">
+</label>
+
+<label>
+Anteil B → A pro Zeitschritt (%)
+<input type="number" id="k2" value="5" min="0" max="100">
+</label>
+
+<label>
+Anzahl Zeitschritte
+<input type="number" id="steps" value="50" min="1">
+</label>
+
+<button onclick="simulate()">
+Simulation starten
+</button>
+
+<div class="info">
+<b>Hinweis:</b><br>
+Die Gesamtzahl der Teilchen bleibt konstant.
+Es werden ausschließlich ganze Teilchen verwendet.
+</div>
+
+</div>
+
+<div>
+
+<div class="chart-container">
+<canvas id="chart1"></canvas>
+</div>
+
+<div class="chart-container">
+<canvas id="chart2"></canvas>
+</div>
+
+</div>
+
+</div>
+
+<h2>Tabellendaten</h2>
+
+<div id="tableContainer"></div>
+
+<script>
+
+let chart1;
+let chart2;
+
+function simulate(){
+
+let A = parseInt(document.getElementById("startA").value);
+let B = parseInt(document.getElementById("startB").value);
+
+const k1 = parseFloat(document.getElementById("k1").value)/100;
+const k2 = parseFloat(document.getElementById("k2").value)/100;
+
+const steps = parseInt(document.getElementById("steps").value);
+
+let time = [];
+
+let valuesA = [];
+let valuesB = [];
+
+let reactedA = [];
+let reactedB = [];
+
+let tableHTML = `
+<table>
+<tr>
+<th>Zeit</th>
+<th>Teilchen A</th>
+<th>Teilchen B</th>
+<th>reagierende A → B</th>
+<th>reagierende B → A</th>
+</tr>
+`;
+
+for(let t=0;t<=steps;t++){
+
+    time.push(t);
+
+    valuesA.push(A);
+    valuesB.push(B);
+
+    const rA = Math.floor(A * k1);
+    const rB = Math.floor(B * k2);
+
+    reactedA.push(rA);
+    reactedB.push(rB);
+
+    tableHTML += `
+    <tr>
+        <td>${t}</td>
+        <td>${A}</td>
+        <td>${B}</td>
+        <td>${rA}</td>
+        <td>${rB}</td>
+    </tr>
+    `;
+
+    const newA = A - rA + rB;
+    const newB = B + rA - rB;
+
+    A = newA;
+    B = newB;
+}
+
+tableHTML += "</table>";
+
+document.getElementById("tableContainer").innerHTML = tableHTML;
+
+drawCharts(
+    time,
+    valuesA,
+    valuesB,
+    reactedA,
+    reactedB
+);
+
+}
+
+function drawCharts(
+    time,
+    valuesA,
+    valuesB,
+    reactedA,
+    reactedB
+){
+
+if(chart1) chart1.destroy();
+if(chart2) chart2.destroy();
+
+chart1 = new Chart(
+document.getElementById("chart1"),
+{
+type:'line',
+data:{
+labels:time,
+datasets:[
+{
+label:'Teilchen A',
+data:valuesA,
+borderWidth:2,
+tension:0
+},
+{
+label:'Teilchen B',
+data:valuesB,
+borderWidth:2,
+tension:0
+}
+]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+title:{
+display:true,
+text:'Teilchenzahl von A und B'
+}
+},
+scales:{
+x:{
+title:{
+display:true,
+text:'Zeit'
+}
+},
+y:{
+title:{
+display:true,
+text:'Teilchenzahl'
+}
+}
+}
+}
+});
+
+chart2 = new Chart(
+document.getElementById("chart2"),
+{
+type:'line',
+data:{
+labels:time,
+datasets:[
+{
+label:'reagierende Teilchen A → B',
+data:reactedA,
+borderWidth:2,
+tension:0
+},
+{
+label:'reagierende Teilchen B → A',
+data:reactedB,
+borderWidth:2,
+tension:0
+}
+]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+title:{
+display:true,
+text:'Reaktionsgeschwindigkeiten'
+}
+},
+scales:{
+x:{
+title:{
+display:true,
+text:'Zeit'
+}
+},
+y:{
+title:{
+display:true,
+text:'reagierende Teilchen pro Zeitschritt'
+}
+}
+}
+}
+});
+
+}
+
+simulate();
+
+</script>
+
+</body>
+</html>
